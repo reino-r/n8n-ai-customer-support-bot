@@ -1,0 +1,456 @@
+{
+  "name": "Automated Support Assistant",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        80,
+        0
+      ],
+      "id": "0d8ad607-9792-43b8-a0ec-80f4c0e8beba",
+      "name": "Telegram Trigger",
+      "webhookId": "49f08b2d-2bb1-4a57-92f7-72114c600064",
+      "credentials": {
+        "telegramApi": {
+          "id": "8T8rpOrtkmdI6ESJ",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "11zeeJuKx2IHUix8bYiLUuiNNtGppb7YOOZUIO_qdRVI",
+          "mode": "list",
+          "cachedResultName": "Knowledge Base Bot",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/11zeeJuKx2IHUix8bYiLUuiNNtGppb7YOOZUIO_qdRVI/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "KnowledgeBase",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/11zeeJuKx2IHUix8bYiLUuiNNtGppb7YOOZUIO_qdRVI/edit#gid=0"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "A (Pertanyaan)",
+              "lookupValue": "={{ $json.message.text.toLowerCase() }}"
+            }
+          ]
+        },
+        "options": {
+          "returnFirstMatch": true
+        }
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        256,
+        0
+      ],
+      "id": "076e8b1b-6c98-4c48-869c-0b03c730ef74",
+      "name": "Get row(s) in sheet",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "shAoX1Y9DAiaUTda",
+          "name": "Google Sheets OAuth2 API"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "bfbac7de-98ae-4b69-a0aa-1e05ab3a7490",
+              "leftValue": "={{ $json['B (Jawaban)'] }}",
+              "rightValue": true,
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        416,
+        0
+      ],
+      "id": "fab6da45-c94c-46f3-b961-4ed5c50fe384",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.groq.com/openai/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"llama-3.3-70b-versatile\",\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"Anda adalah asisten customer service yang ramah dan profesional. Jawablah dengan singkat, jelas, dan gunakan bahasa Indonesia yang baik.\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"{{ $('Telegram Trigger').item.json.message.text }}\"\n    }\n  ],\n  \"temperature\": 0.7,\n  \"max_tokens\": 500\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        624,
+        96
+      ],
+      "id": "7c3c8d9e-7fb9-44ea-a117-a05cf185e345",
+      "name": "HTTP Request",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "aRmeVkmUS6QtGlB9",
+          "name": "Header Auth account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "text": "={{ $json['B (Jawaban)'] }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        624,
+        -96
+      ],
+      "id": "0bd3f524-ab61-48dd-81ee-e3f9e9e522ea",
+      "name": "Send a text message if TRUE",
+      "webhookId": "2878f705-1065-491e-9dbf-96991764d81e",
+      "credentials": {
+        "telegramApi": {
+          "id": "8T8rpOrtkmdI6ESJ",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "text": "={{ $json.choices[0].message.content }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        832,
+        96
+      ],
+      "id": "0f5e3144-c488-4e7d-8973-783200ca3028",
+      "name": "Send a text message if FALSE",
+      "webhookId": "89825a50-a2b0-43c5-986d-f37b2f7a1f6f",
+      "credentials": {
+        "telegramApi": {
+          "id": "8T8rpOrtkmdI6ESJ",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "11zeeJuKx2IHUix8bYiLUuiNNtGppb7YOOZUIO_qdRVI",
+          "mode": "list",
+          "cachedResultName": "Knowledge Base Bot",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/11zeeJuKx2IHUix8bYiLUuiNNtGppb7YOOZUIO_qdRVI/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1086034338,
+          "mode": "list",
+          "cachedResultName": "LogPercakapan",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/11zeeJuKx2IHUix8bYiLUuiNNtGppb7YOOZUIO_qdRVI/edit#gid=1086034338"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Timestamp": "={{ $now }}",
+            "User_ID": "={{ $('Telegram Trigger').item.json.message.from.id }}",
+            "Pertanyaan": "={{ $('Telegram Trigger').item.json.message.text }}",
+            "Jawaban": "={{ $('Get row(s) in sheet').first().json['B (Jawaban)'] }}",
+            "Sumber": "Database"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Timestamp",
+              "displayName": "Timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "User_ID",
+              "displayName": "User_ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Pertanyaan",
+              "displayName": "Pertanyaan",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Jawaban",
+              "displayName": "Jawaban",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Sumber",
+              "displayName": "Sumber",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        832,
+        -96
+      ],
+      "id": "39fa21c0-6bfd-4b0f-bf0c-bd6fe81cecad",
+      "name": "Append row in sheet if TRUE",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "shAoX1Y9DAiaUTda",
+          "name": "Google Sheets OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "11zeeJuKx2IHUix8bYiLUuiNNtGppb7YOOZUIO_qdRVI",
+          "mode": "list",
+          "cachedResultName": "Knowledge Base Bot",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/11zeeJuKx2IHUix8bYiLUuiNNtGppb7YOOZUIO_qdRVI/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1086034338,
+          "mode": "list",
+          "cachedResultName": "LogPercakapan",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/11zeeJuKx2IHUix8bYiLUuiNNtGppb7YOOZUIO_qdRVI/edit#gid=1086034338"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Timestamp": "={{ $now }}",
+            "User_ID": "={{ $('Telegram Trigger').item.json.message.from.id }}",
+            "Pertanyaan": "={{ $('Telegram Trigger').item.json.message.text }}",
+            "Jawaban": "={{ $('HTTP Request').item.json.choices[0].message.content }}",
+            "Sumber": "AI Groq"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Timestamp",
+              "displayName": "Timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "User_ID",
+              "displayName": "User_ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Pertanyaan",
+              "displayName": "Pertanyaan",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Jawaban",
+              "displayName": "Jawaban",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Sumber",
+              "displayName": "Sumber",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1040,
+        96
+      ],
+      "id": "a79f26f8-d4bc-4b27-9c76-d7a27d33ba9d",
+      "name": "Append row in sheet if FALSE",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "shAoX1Y9DAiaUTda",
+          "name": "Google Sheets OAuth2 API"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Send a text message if TRUE",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Send a text message if FALSE",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a text message if TRUE": {
+      "main": [
+        [
+          {
+            "node": "Append row in sheet if TRUE",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a text message if FALSE": {
+      "main": [
+        [
+          {
+            "node": "Append row in sheet if FALSE",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "ee6e407b-fd6c-415d-bb91-89c24c589ac9",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "14213bb5d8d7f8ec50a7b06b0a2dcd423d8a76a2cf01af37aa587ad725c60adc"
+  },
+  "nodeGroups": [],
+  "id": "1GHE8WFTwNZdVfHG",
+  "tags": []
+}
